@@ -56,8 +56,8 @@ The things you can do are documented in the JSON files in the [`ref`](./ref) dir
 They were acquired like this:
 
 ```sh
-$ curl https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/json/js_protocol.json > js.json
-$ curl https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/json/browser_protocol.json > browser.json
+$ curl https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/json/js_protocol.json > ref/js.json
+$ curl https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/json/browser_protocol.json > ref/browser.json
 ```
 
 I've made a view to make them easier to understand:
