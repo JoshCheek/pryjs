@@ -15,6 +15,12 @@ begin
   API = JSON.parse(File.read(filename), symbolize_names: true)
 end
 
+class String
+  def indent
+    gsub /^/, "  "
+  end
+end
+
 def self.HEADER1(header, experimental:false)
   line = "-- #{header}#{experimental ? " (experimental)" : ""} ".ljust(WIDTH, "-")
   puts "\n\e[1;37;#{experimental ? 41 : 45}m#{line}\e[0m"
@@ -24,33 +30,43 @@ def self.HEADER2(header)
   puts "\n\e[44;37m  #{header}  \e[0m"
 end
 
+def self.show_paramable(obj, show_desc: false)
+  obj          = obj.dup
+  name         = obj.delete(:name) || raise("No name in #{obj.inspect}")
+  description  = obj.delete(:description) || ""
+  parameters   = obj.delete(:parameters) || []
+  returns      = obj.delete(:returns)
+  experimental = obj.delete(:experimental)
+  redirect     = obj.delete(:redirect)
+  raise "Unexpected keys: #{obj.keys.inspect}" unless obj.empty?
+
+  pre_name = experimental ? "\e[91mexperimental\e[0m " : ""
+  params = parameters.map do |name:,**rest|
+    type = rest[:$ref]
+    "#{type}#{" " if type}\e[96m#{name}\e[0m"
+  end
+  pre_params = ""
+  if params.join(", ").gsub(/\e\[.*?m/,"").size > WIDTH*2/3
+    pre_params, params = "\n", params.map { |param| "  #{param},\n" }.join
+  else
+    params = params.join(", ")
+  end
+  puts "#{pre_name}\e[95m#{name}\e[0m(#{pre_params}#{params})".indent
+  puts description.indent.indent if show_desc && description
+end
+
 API.fetch(:domains).map do |domain|
   next if domain[:deprecated]
+  name = domain.fetch(:domain)
 
-  HEADER1 domain.fetch(:domain), experimental: domain[:experimental]
+  HEADER1 name, experimental: domain[:experimental]
   puts domain[:description] if domain[:description]
 
-  HEADER2 "COMMANDS"
-  domain.fetch(:commands).each do |name:, description:"", parameters:[], returns:nil, experimental:false, redirect:false|
-    pre_name = ""
-    pre_name = "\e[91mexperimental\e[0m " if experimental
-    params = parameters.map do |name:,**rest|
-      type = rest[:$ref]
-      "#{type}#{" " if type}\e[96m#{name}\e[0m"
-    end
-    pre_params = ""
-    if params.join(", ").gsub(/\e\[.*?m/,"").size > WIDTH*2/3
-      pre_params, params = "\n", params.map { |param| "  #{param},\n" }.join
-    else
-      params = params.join(", ")
-    end
-    puts "#{pre_name}\e[95m#{name}\e[0m(#{pre_params}#{params})".gsub(/^/, "  ")
-  end
+  HEADER2 "COMMANDS (#{name})"
+  domain.fetch(:commands).each { |cmd| show_paramable cmd }
 
-  # HEADER2 "EVENTS"
-  # domain.fetch(:evetns, []).each { |name:, description:"", experimental: false, parameters:[]|
-  #   next if experimental
-  # }
+  HEADER2 "EVENTS (#{name})"
+  domain.fetch(:events, []).each { |event| show_paramable event, show_desc: true }
 
   # dependencies
   # types
