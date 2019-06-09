@@ -63,5 +63,6 @@ $ curl https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master
 I've made a view to make them easier to understand:
 
 ```sh
-$ ref/show_js
+$ ref/show js
+$ ref/show browser
 ```

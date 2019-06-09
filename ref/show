@@ -5,7 +5,15 @@ require 'pp'
 # require 'coderay'
 require 'io/console'
 HEIGHT, WIDTH = $stdin.winsize
-filename = File.join __dir__, "js.json"
+begin
+  filename = ARGV[0]
+  if filename != 'js' && filename != 'browser'
+    $stderr.puts "First argument to this script must be the filename of either js or browser"
+    exit 1
+  end
+  filename = File.join __dir__, "#{filename}.json"
+  API = JSON.parse(File.read(filename), symbolize_names: true)
+end
 
 def self.HEADER1(header)
   puts "\e[1;37;45m" + "-- #{header} ".ljust(WIDTH, "-") + "\e[0m"
@@ -14,8 +22,6 @@ end
 def self.HEADER2(header)
   puts "\n\e[44;37m  #{header}  \e[0m"
 end
-
-API = JSON.parse(File.read(filename), symbolize_names: true)
 
 API.fetch(:domains).map do |domain|
   next if domain[:deprecated] || domain[:experimental]
