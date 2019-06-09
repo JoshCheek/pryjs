@@ -59,3 +59,9 @@ They were acquired like this:
 $ curl https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/json/js_protocol.json > js.json
 $ curl https://raw.githubusercontent.com/ChromeDevTools/devtools-protocol/master/json/browser_protocol.json > browser.json
 ```
+
+I've made a view to make them easier to understand:
+
+```sh
+$ ref/show_js
+```

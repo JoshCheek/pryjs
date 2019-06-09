@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+require 'json'
+require 'pp'
+
+# require 'coderay'
+require 'io/console'
+HEIGHT, WIDTH = $stdin.winsize
+filename = File.join __dir__, "js.json"
+
+def self.HEADER1(header)
+  puts "\e[1;37;45m" + "-- #{header} ".ljust(WIDTH, "-") + "\e[0m"
+end
+
+def self.HEADER2(header)
+  puts "\n\e[44;37m  #{header}  \e[0m"
+end
+
+API = JSON.parse(File.read(filename), symbolize_names: true)
+
+API.fetch(:domains).map do |domain|
+  next if domain[:deprecated] || domain[:experimental]
+
+  HEADER1 domain.fetch(:domain)
+  puts domain[:description] if domain[:description]
+
+  HEADER2 "COMMANDS"
+  domain.fetch(:commands).each do |name:, description:"", parameters:[], returns:nil, experimental:false, redirect:false|
+    next if experimental
+    params = parameters.map do |name:,**rest|
+      type = rest[:$ref]
+      "#{type}#{" " if type}\e[96m#{name}\e[0m"
+    end
+    pre_params = ""
+    if params.join(", ").gsub(/\e\[.*?m/,"").size > WIDTH*2/3
+      pre_aprams, params = "\n", params.map { |param| "  #{param},\n" }.join
+    else
+      params = params.join(", ")
+    end
+    puts "\e[95mm#{name}\e[0m(#{pre_params}#{params})".gsub(/^/, "  ")
+  end
+
+  # HEADER2 "EVENTS"
+  # domain.fetch(:evetns, []).each { |name:, description:"", experimental: false, parameters:[]|
+  #   next if experimental
+  # }
+
+  # dependencies
+  # types
+end
