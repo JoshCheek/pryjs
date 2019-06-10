@@ -21,7 +21,7 @@ void Method(const Nan::FunctionCallbackInfo<v8::Value>& info) {
     dup2(stdoutr, 4); close(stdoutr);
     dup2(stderrr, 5); close(stderrr);
 
-    char const *str_ruby = "/Users/josh/.rubies/ruby-2.6.3/bin/ruby";
+    char const *str_ruby = "ruby";
     char const *str_dash_e = "-e";
     char const *str_program =
       "puts 'hi'\n"\
@@ -32,7 +32,7 @@ void Method(const Nan::FunctionCallbackInfo<v8::Value>& info) {
       "stdin.sync  = true\n" \
       "stdout.sync = true\n" \
       "stderr.sync = true\n" \
-      "puts \"Type a line\"\n" \
+      "puts \"Type a line (for child)\"\n" \
       "line = gets.chomp\n" \
       "puts \"PRY-IN(#{line.inspect})\"\n" \
       "stdin.puts line\n" \
@@ -87,7 +87,7 @@ void Method(const Nan::FunctionCallbackInfo<v8::Value>& info) {
   dup2(stdouto, STDOUT_FILENO);
   dup2(stderro, STDERR_FILENO);
 
-  fprintf(stdout, "Type a line\n");
+  fprintf(stdout, "Type a line (for parent)\n");
   fflush(stdout);
   fgets(buf, sizeof(buf), stdin);
   fprintf(stdout, "PARENT-OUT(%s)\n", buf);
