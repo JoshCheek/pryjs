@@ -1,3 +1,3 @@
-var addon = require('./build/Release/magic.node')
+var magic = require('./build/Release/magic.node')
 
-console.log(addon.hello())
+console.log(magic.start())
