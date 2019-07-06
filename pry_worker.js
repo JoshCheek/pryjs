@@ -9,17 +9,11 @@ let id = 0
 void async function run() {
   const ws = new WebSocket(url)
 
-  ws.on('message', (message) => {
-    console.log('WORKER SEES WS MESSAGE: ', message)
-  })
-  ws.on('close', (...idk) => {
-    console.log('WORKER SEES CLOSE EVENT: ', idk)
-  })
+  ws.on('message', (message) => console.log('WORKER SEES WS MESSAGE: ', message))
+  ws.on('close',   (...idk) => console.log('WORKER SEES CLOSE EVENT: ', idk))
 
   await new Promise(resolve => ws.on('open', resolve))
 
-  ws.send()
-  const params = { expression: line }
   const message = JSON.stringify({id: id++, method: 'Debugger.pause'})
   console.log(`sending ${message}`)
   ws.send(message)
@@ -44,7 +38,7 @@ void async function run() {
   rl.on('line', (line) => {
     console.log({line})
     if (line === 'exit') {
-      process.exit(0)
+      close()
     } else {
       const params = { expression: line }
       const message = JSON.stringify({id: id++, method, params})
