@@ -11,7 +11,10 @@ module.exports = async function pry() {
     workerData: {
       url: url,
       pid: process.pid,
-    }
+    },
+    stdin:  false,
+    stdout: false,
+    stderr: false,
   })
 
   return new Promise((resolve, reject) => {
@@ -24,6 +27,7 @@ module.exports = async function pry() {
       reject(error)
     })
     worker.on('exit', (code) => {
+      console.log('WORKER EXITED WITH CODE: ', code)
       if (code)
         reject(new Error(`Pry failed with exit code ${code}`));
       else
