@@ -99,9 +99,11 @@ void Method(const Nan::FunctionCallbackInfo<v8::Value>& info) {
 }
 
 void Init(v8::Local<v8::Object> exports) {
+  v8::Local<v8::Context> context = Nan::GetCurrentContext();
+
   exports->Set(
     Nan::New("start").ToLocalChecked(),
-    Nan::New<v8::FunctionTemplate>(Method)->GetFunction()
+    Nan::New<v8::FunctionTemplate>(Method)->GetFunction(context).ToLocalChecked()
   );
 }
 
