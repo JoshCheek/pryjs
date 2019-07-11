@@ -54,8 +54,10 @@ function getLogger(logLevel, worker) {
   const reprompt = () => {
     needReprompt = true
     setTimeout(() => {
-      if (needReprompt) worker.postMessage('reprompt')
-      needReprompt = false
+      if (needReprompt) {
+        needReprompt = false
+        worker.postMessage('reprompt')
+      }
     }, 50)
   }
 
