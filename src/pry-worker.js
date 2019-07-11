@@ -1,3 +1,4 @@
+const Queue                                    = require('./queue')
 const tty                                      = require('tty')
 const fs                                       = require('fs')
 const WebSocket                                = require('ws')
@@ -8,11 +9,16 @@ const { url, pid }                             = workerData
 
 class Client {
   constructor ({ ws, logPort }) {
+    this.queue     = new Queue()
     this.logPort   = logPort
     this.messageId = 0
     this.ws        = ws
+    this.listeners = {}
     ws.on('message', (message) => {
-      this.log('debug', { type: 'worker-ws-received', message: JSON.parse(message) })
+      this.log('debug', { type: 'worker-ws-received', message })
+      const { id, ...rest } = JSON.parse(message)
+      const callback = this.listeners[id]
+      callback && callback(rest)
     })
     ws.on('close',   (...idk) => {
       this.log('debug', { type: 'worker-ws-closed', idk })
@@ -20,9 +26,13 @@ class Client {
   }
 
   send (method, data={}) {
-    const message = { id: this.messageId++, method, ...data }
-    this.log('debug', { type: 'worker-ws-send', message })
-    this.ws.send(JSON.stringify(message))
+    return this.enqueue(complete => {
+      const id = this.messageId++
+      const message = { id, method, ...data }
+      this.listeners[id] = complete
+      this.log('debug', { type: 'worker-ws-send', message })
+      this.ws.send(JSON.stringify(message))
+    })
   }
 
   close () {
@@ -32,6 +42,10 @@ class Client {
 
   log (level, message) {
     this.logPort.postMessage({ type: 'log', level, message })
+  }
+
+  enqueue(fn) {
+    return this.queue.enqueue(fn)
   }
 }
 
@@ -53,7 +67,11 @@ void async function run() {
 
   // listen for messages from parent
   parentPort.on('message', (message) => {
-    if (message === 'reprompt') rl.prompt()
+    if (message === 'reprompt') {
+      rl.prompt()
+    } else {
+      throw new Error(`UNKNOWN MESSAGE FROM PARENT: ${message}`)
+    }
   })
 
   // read the user's input and pass to the debugging client
@@ -64,21 +82,20 @@ void async function run() {
     prompt: 'pry.js> ',
   })
 
-  rl.prompt()
-
   rl.on('close', () => {
     client.log('verbose', { type: 'worker-rl-closed' })
     close()
   })
 
+  rl.prompt()
   const method = 'Runtime.evaluate'
-  rl.on('line', (line) => {
+  rl.on('line', async (line) => {
     client.log('debug', { type: 'worker-rl-line', line })
     if (line === 'exit') {
       client.log('verbose', { type: 'worker-rl-close', line })
       close()
     } else {
-      client.send(method, { params: { expression: line } })
+      await client.send(method, { params: { expression: line } })
       rl.prompt()
     }
   })
@@ -89,6 +106,6 @@ void async function run() {
     process.exit(status)
   }
 }().catch(error => {
-  client.log('error', { type: 'worker-error', error })
+  client.log('error', error)
   throw error
 })
