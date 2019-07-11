@@ -1,13 +1,15 @@
-const readline = require('readline')
-const inspector = require('inspector')
+const readline   = require('readline')
+const inspector  = require('inspector')
 const { Worker } = require('worker_threads')
+const { join }   = require('path')
+const workerPath = join(__dirname, 'pry-worker.js')
 
 module.exports = async function pry() {
   process._debugEnd()
   process._debugProcess(process.pid)
   const url = await getDebugUrl()
 
-  const worker = new Worker("./pry_worker.js", {
+  const worker = new Worker(workerPath, {
     workerData: {
       url: url,
       pid: process.pid,

@@ -1,4 +1,4 @@
-const pry = require('./pry')
+const pry = require('./src')
 
 void async function main () {
   a = 123
