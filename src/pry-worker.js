@@ -7,21 +7,15 @@ const { url, pid }                             = workerData
 
 
 class Client {
-  constructor ({ url, parentPort }) {
-    const ws = new WebSocket(url)
+  constructor ({ ws, logPort }) {
+    this.logPort   = logPort
+    this.messageId = 0
+    this.ws        = ws
     ws.on('message', (message) => {
       this.log('debug', { type: 'worker-ws-received', message: JSON.parse(message) })
     })
     ws.on('close',   (...idk) => {
       this.log('debug', { type: 'worker-ws-closed', idk })
-    })
-    this.url        = url
-    this.parentPort = parentPort
-    this.messageId  = 0
-    this.ws         = ws
-    this.connect    = new Promise(resolve => {
-      this.log('verbose', { type: 'worker-ws-connect', url })
-      ws.on('open', resolve)
     })
   }
 
@@ -37,15 +31,22 @@ class Client {
   }
 
   log (level, message) {
-    this.parentPort. postMessage({ type: 'log', level, message })
+    this.logPort.postMessage({ type: 'log', level, message })
   }
 }
 
 
 void async function run() {
   // connect to debugger via a websocket
-  const client = new Client({ url, parentPort })
-  await client.connect
+  const ws     = new WebSocket(url)
+  const client = new Client({ ws, logPort: parentPort })
+  client.log('verbose', { type: 'worker-ws-open' })
+  await new Promise(resolve => {
+    ws.on('open', () => {
+      client.log('verbose', { type: 'worker-ws-opened' })
+      resolve()
+    })
+  })
 
   // pause the program
   client.send('Debugger.pause')
