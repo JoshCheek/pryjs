@@ -3,6 +3,6 @@ const pry = require('./src')
 void async function main () {
   a = 123
   console.log({ a })
-  await pry()
+  await pry({ logLevel: 'silly' })
   console.log({ a })
 }()

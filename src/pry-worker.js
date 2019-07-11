@@ -1,25 +1,56 @@
-const tty = require('tty')
-const fs = require('fs')
-const WebSocket = require('ws')
-const readline = require('readline')
+const tty                                      = require('tty')
+const fs                                       = require('fs')
+const WebSocket                                = require('ws')
+const readline                                 = require('readline')
 const { isMainThread, parentPort, workerData } = require('worker_threads')
-const { url, pid } = workerData
+const { url, pid }                             = workerData
 
-let id = 0
+
+class Client {
+  constructor ({ url, parentPort }) {
+    const ws = new WebSocket(url)
+    ws.on('message', (message) => {
+      this.log('debug', { type: 'worker-ws-message', message })
+    })
+    ws.on('close',   (...idk) => {
+      this.log('debug', { type: 'worker-ws-closed', idk })
+    })
+    this.url        = url
+    this.parentPort = parentPort
+    this.messageId  = 0
+    this.ws         = ws
+    this.connect    = new Promise(resolve => {
+      this.log('verbose', { type: 'worker-ws-connect', url })
+      ws.on('open', resolve)
+    })
+  }
+
+  send (method, data={}) {
+    const message = { id: this.messageId++, method, ...data }
+    this.log('debug', { type: 'worker-ws-send', message })
+    this.ws.send(JSON.stringify(message))
+  }
+
+  close () {
+    this.log('verbose', { type: 'worker-ws-close' })
+    this.ws.close()
+  }
+
+  log (level, message) {
+    this.parentPort. postMessage({ type: 'log', level, message })
+  }
+}
+
+
 void async function run() {
-  const ws = new WebSocket(url)
+  // connect to debugger via a websocket
+  const client = new Client({ url, parentPort })
+  await client.connect
 
-  ws.on('message', (message) => console.log('WORKER SEES WS MESSAGE: ', message))
-  ws.on('close',   (...idk) => console.log('WORKER SEES CLOSE EVENT: ', idk))
+  // pause the program
+  client.send('Debugger.pause')
 
-  await new Promise(resolve => ws.on('open', resolve))
-
-  const message = JSON.stringify({id: id++, method: 'Debugger.pause'})
-  console.log(`sending ${message}`)
-  ws.send(message)
-
-  console.log('WORKER CONNECTED TO PARENT')
-
+  // read the user's input and pass to the debugging client
   const stdin = new tty.ReadStream(fs.openSync('/dev/tty'))
   const rl = readline.createInterface({
     input:  stdin,
@@ -30,28 +61,28 @@ void async function run() {
   rl.prompt()
 
   rl.on('close', () => {
-    console.log('CLOSED')
+    client.log('verbose', { type: 'worker-rl-closed' })
     close()
   })
 
   const method = 'Runtime.evaluate'
   rl.on('line', (line) => {
-    console.log({line})
+    client.log('debug', { type: 'worker-rl-line', line })
     if (line === 'exit') {
+      client.log('verbose', { type: 'worker-rl-close', line })
       close()
     } else {
-      const params = { expression: line }
-      const message = JSON.stringify({id: id++, method, params})
-      console.log(`sending ${message}`)
-      ws.send(message)
-      parentPort.postMessage({ line })
+      client.send(method, { params: { expression: line } })
       rl.prompt()
     }
   })
 
   function close(status=0) {
-    ws.close()
+    client.close()
     rl.close()
     process.exit(status)
   }
-}()
+}().catch(error => {
+  client.log('error', { type: 'worker-error', error })
+  throw error
+})
