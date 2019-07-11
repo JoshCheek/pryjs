@@ -49,7 +49,7 @@ function getDebugUrl() {
 function getLogger(logLevel, worker) {
   if (!logLevel) return new MockLogger({ level: 'silly' })
 
-  // debounce reprompt for 50ms
+  // debounce the reprompt (only kinda works, but IDK why :/)
   let needReprompt = false
   const reprompt = () => {
     needReprompt = true

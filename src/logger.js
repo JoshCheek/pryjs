@@ -52,8 +52,7 @@ class Logger {
       if (string[string.length-1] !== '\n') {
         string += '\n'
       }
-      this[logStreamKey].write(string)
-      this[afterLineKey](string)
+      this[logStreamKey].write(string, this[afterLineKey])
     }
   }
 
