@@ -3,6 +3,7 @@ const tty                                      = require('tty')
 const fs                                       = require('fs')
 const WebSocket                                = require('ws')
 const readline                                 = require('readline')
+const util                                     = require('util')
 const { isMainThread, parentPort, workerData } = require('worker_threads')
 const { url, pid }                             = workerData
 
@@ -18,7 +19,14 @@ class Client {
       this.log('debug', { type: 'worker-ws-received', message })
       const { id, ...rest } = JSON.parse(message)
       const callback = this.listeners[id]
-      callback && callback(rest)
+      const keys = Object.keys(rest)
+      const args = []
+      if (keys.length === 1 && keys[0] === 'result') {
+        args.push(rest.result)
+      } else {
+        args.push(rest)
+      }
+      callback && callback(...args)
     })
     ws.on('close',   (...idk) => {
       this.log('debug', { type: 'worker-ws-closed', idk })
@@ -95,7 +103,17 @@ void async function run() {
       client.log('verbose', { type: 'worker-rl-close', line })
       close()
     } else {
-      await client.send(method, { params: { expression: line } })
+      const { result, ...values } = await client.send(method, { params: { expression: line } })
+      if (Object.keys(values).length) {
+        client.log('error', { type: 'worker-unexpected-values-in-result', values })
+      }
+      switch (result.type) {
+        case 'number':
+          console.log(util.inspect(result.value, { colors: true, depth: null }))
+          break
+        default:
+          console.log('NOT SURE WHAT TO DO WITH THIS: ', result)
+      }
       rl.prompt()
     }
   })
