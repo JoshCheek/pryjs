@@ -3,13 +3,9 @@ const { Worker }             = require('worker_threads')
 const { join }               = require('path')
 const { Logger, MockLogger } = require('./logger')
 
-const workerPath     = join(__dirname, 'pry-worker.js')
+const workerPath = join(__dirname, 'pry-worker.js')
 
 module.exports = async function pry({ logLevel=null }={}) {
-  const logger = logLevel
-    ? new Logger({ level: logLevel, stream: process.stderr })
-    : new MockLogger({ level: 'silly' })
-
   process._debugEnd()
   process._debugProcess(process.pid)
   const url = await getDebugUrl()
@@ -18,6 +14,8 @@ module.exports = async function pry({ logLevel=null }={}) {
     workerData: { logLevel, url: url, pid: process.pid },
     stdin: false, stdout: false, stderr: false,
   })
+
+  const logger = getLogger(logLevel, worker)
 
   return new Promise((resolve, reject) => {
     worker.on('message', (message) => {
@@ -45,5 +43,25 @@ function getDebugUrl() {
       resolve(url)
     else
       resolve(getDebugUrl())
+  })
+}
+
+function getLogger(logLevel, worker) {
+  if (!logLevel) return new MockLogger({ level: 'silly' })
+
+  // debounce reprompt for 50ms
+  let needReprompt = false
+  const reprompt = () => {
+    needReprompt = true
+    setTimeout(() => {
+      if (needReprompt) worker.postMessage('reprompt')
+      needReprompt = false
+    }, 50)
+  }
+
+  return new Logger({
+    level:     logLevel,
+    stream:    process.stderr,
+    afterLine: reprompt,
   })
 }

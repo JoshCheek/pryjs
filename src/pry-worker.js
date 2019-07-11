@@ -10,7 +10,7 @@ class Client {
   constructor ({ url, parentPort }) {
     const ws = new WebSocket(url)
     ws.on('message', (message) => {
-      this.log('debug', { type: 'worker-ws-message', message })
+      this.log('debug', { type: 'worker-ws-received', message: JSON.parse(message) })
     })
     ws.on('close',   (...idk) => {
       this.log('debug', { type: 'worker-ws-closed', idk })
@@ -49,6 +49,11 @@ void async function run() {
 
   // pause the program
   client.send('Debugger.pause')
+
+  // listen for messages from parent
+  parentPort.on('message', (message) => {
+    if (message === 'reprompt') rl.prompt()
+  })
 
   // read the user's input and pass to the debugging client
   const stdin = new tty.ReadStream(fs.openSync('/dev/tty'))

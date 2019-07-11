@@ -2,6 +2,7 @@
 const util         = require('util')
 const logStreamKey = Symbol('logStream')
 const logLevelKey  = Symbol('logLevel')
+const afterLineKey = Symbol('afterLine')
 const LEVELS       = ['error', 'warn', 'info', 'verbose', 'debug', 'silly']
 
 /* eslint-disable require-jsdoc */
@@ -37,11 +38,12 @@ function stringify (obj) {
  * Writes messages to a stream if the message has a sufficiently imperative log level
  */
 class Logger {
-  constructor ({level, stream}) {
+  constructor ({level, stream, afterLine}) {
     validateLevel(level)
     validateStream(stream)
     this[logLevelKey]  = levelIndex(level)
     this[logStreamKey] = stream
+    this[afterLineKey] = afterLine || (() => {})
   }
 
   log (level, message) {
@@ -51,6 +53,7 @@ class Logger {
         string += '\n'
       }
       this[logStreamKey].write(string)
+      this[afterLineKey](string)
     }
   }
 
