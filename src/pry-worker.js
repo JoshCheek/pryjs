@@ -1,11 +1,13 @@
 const Queue                                    = require('./queue')
+const { Logger, MockLogger }                   = require('./logger')
 const tty                                      = require('tty')
 const fs                                       = require('fs')
 const WebSocket                                = require('ws')
 const readline                                 = require('readline')
 const util                                     = require('util')
 const { isMainThread, parentPort, workerData } = require('worker_threads')
-const { url, pid }                             = workerData
+const { logLevel, url, pid, loc }              = workerData
+
 
 
 class Client {
@@ -15,6 +17,12 @@ class Client {
     this.messageId = 0
     this.ws        = ws
     this.listeners = {}
+    this.logger    = new Logger({
+      level:     logLevel,
+      stream:    process.stderr,
+      afterLine: () => {},
+    })
+
     ws.on('message', (message) => {
       this.log('debug', { type: 'worker-ws-received', message })
       const { id, ...rest } = JSON.parse(message)
@@ -28,7 +36,7 @@ class Client {
       }
       callback && callback(...args)
     })
-    ws.on('close',   (...idk) => {
+    ws.on('close', (...idk) => {
       this.log('debug', { type: 'worker-ws-closed', idk })
     })
   }
@@ -49,7 +57,8 @@ class Client {
   }
 
   log (level, message) {
-    this.logPort.postMessage({ type: 'log', level, message })
+    // this.logPort.postMessage({ type: 'log', level, message })
+    this.logger.log(level, message)
   }
 
   enqueue(fn) {
@@ -59,6 +68,7 @@ class Client {
 
 
 void async function run() {
+  console.log(loc)
   // connect to debugger via a websocket
   const ws     = new WebSocket(url)
   const client = new Client({ ws, logPort: parentPort })
@@ -71,7 +81,8 @@ void async function run() {
   })
 
   // pause the program
-  client.send('Debugger.pause')
+  // await client.send('Debugger.enable')
+  // client.send('Debugger.pause')
 
   // listen for messages from parent
   parentPort.on('message', (message) => {

@@ -1,3 +1,4 @@
+const stackTrace             = require('stack-trace')
 const inspector              = require('inspector')
 const { Worker }             = require('worker_threads')
 const { join }               = require('path')
@@ -6,13 +7,25 @@ const { Logger, MockLogger } = require('./logger')
 const workerPath = join(__dirname, 'pry-worker.js')
 
 module.exports = async function pry({ logLevel=null }={}) {
+  const frame = stackTrace.get()[1]
+
+
   process._debugEnd()
   process._debugProcess(process.pid)
   const url = await getDebugUrl()
 
   const worker = new Worker(workerPath, {
-    workerData: { logLevel, url: url, pid: process.pid },
-    stdin: false, stdout: false, stderr: false,
+    workerData: {
+      logLevel,
+      url: url,
+      pid: process.pid,
+      loc: {
+        name: frame.getFileName(),
+        line: frame.getLineNumber(),
+        col:  frame.getColumnNumber(),
+      },
+    },
+    stdin: false
   })
 
   const logger = getLogger(logLevel, worker)
