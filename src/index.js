@@ -35,6 +35,9 @@ module.exports = async function pry({ logLevel=null }={}) {
       if (message && message.type === 'log') {
         const { type, level, message: workerMessage } = message
         logger.log(level, workerMessage)
+      } else if (message && message.type === 'lololol') {
+        console.log('RESUMING')
+        resolve()
       } else {
         logger.log('debug', { type: 'parent-message', message })
       }

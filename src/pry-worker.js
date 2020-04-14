@@ -17,6 +17,7 @@ class Client {
     this.messageId = 0
     this.ws        = ws
     this.listeners = {}
+    this.scripts   = {}
     this.logger    = new Logger({
       level:     logLevel,
       stream:    process.stderr,
@@ -31,6 +32,25 @@ class Client {
       const args = []
       if (keys.length === 1 && keys[0] === 'result') {
         args.push(rest.result)
+      } else if (rest.method === 'Debugger.scriptParsed') {
+        const params = rest.params
+        let url = params.url
+        if (url.startsWith('file://'))
+          url = url.substring(7, url.length)
+        this.scripts[params.scriptId] = url
+
+        if (url === loc.name ) {
+          this.log('debug', { type: 'worker-whatev', message: `FOUND THE FILE!!!!!: ${params.scriptId}` })
+          this.send('Debugger.setBreakpoint', {
+            "scriptId":     params.scriptId,
+            "lineNumber":   loc.line+1,
+            "columnNumber": 0,
+          })
+          // this.enqueue((complete) => {
+          //   console.log('debug', 'ENQUEUEING RESUME')
+          //   parentPort.postMessage({ type: 'lololol' }).then(complete)
+          // })
+        }
       } else {
         args.push(rest)
       }
@@ -68,7 +88,6 @@ class Client {
 
 
 void async function run() {
-  console.log(loc)
   // connect to debugger via a websocket
   const ws     = new WebSocket(url)
   const client = new Client({ ws, logPort: parentPort })
@@ -81,8 +100,8 @@ void async function run() {
   })
 
   // pause the program
-  // await client.send('Debugger.enable')
-  // client.send('Debugger.pause')
+  await client.send('Debugger.enable')
+  client.send('Debugger.pause') // FIXME: do we need this or not?
 
   // listen for messages from parent
   parentPort.on('message', (message) => {
