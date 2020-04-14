@@ -24,7 +24,7 @@ class Client {
       afterLine: () => {},
     })
 
-    ws.on('message', (message) => {
+    ws.on('message', async (message) => {
       this.log('debug', { type: 'worker-ws-received', message })
       const { id, ...rest } = JSON.parse(message)
       const callback = this.listeners[id]
@@ -41,10 +41,36 @@ class Client {
 
         if (url === loc.name ) {
           this.log('debug', { type: 'worker-whatev', message: `FOUND THE FILE!!!!!: ${params.scriptId}` })
-          this.send('Debugger.setBreakpoint', {
-            "scriptId":     params.scriptId,
-            "lineNumber":   loc.line+1,
-            "columnNumber": 0,
+          // this.send('Debugger.getPossibleBreakpoints', {
+          //   params: {
+          //     start: {
+          //       scriptId:     params.scriptId,
+          //       lineNumber:   loc.line-2,
+          //       columnNumber: 0,
+          //     },
+          //     end: {
+          //       scriptId:     params.scriptId,
+          //       lineNumber:   loc.line+2,
+          //       columnNumber: 0,
+          //     },
+          //     restrictToFunction: false,
+          //   }
+          // })
+
+          // unfortunately, this seems to pause the worker, as well...
+          // probably, if we can get the execution context of the code that will
+          // run when the promise resumes, then we can just call Runtime.evaluate
+          // within that context id. Not sure how to get that, though (it doesn't
+          // exist yet, at this point in time, but the enclosed scopes should
+          // technically exist somewhere out there, probably in the heap)
+          await this.send('Debugger.setBreakpoint', {
+            params: {
+              location: {
+                "scriptId":     params.scriptId,
+                "lineNumber":   loc.line+1,
+                "columnNumber": 0,
+              }
+            }
           })
           // this.enqueue((complete) => {
           //   console.log('debug', 'ENQUEUEING RESUME')
@@ -101,7 +127,7 @@ void async function run() {
 
   // pause the program
   await client.send('Debugger.enable')
-  client.send('Debugger.pause') // FIXME: do we need this or not?
+  // client.send('Debugger.pause') // FIXME: do we need this or not?
 
   // listen for messages from parent
   parentPort.on('message', (message) => {

@@ -15,6 +15,7 @@ module.exports = async function pry({ logLevel=null }={}) {
   const url = await getDebugUrl()
 
   const worker = new Worker(workerPath, {
+    stdin: false,
     workerData: {
       logLevel,
       url: url,
@@ -25,7 +26,6 @@ module.exports = async function pry({ logLevel=null }={}) {
         col:  frame.getColumnNumber(),
       },
     },
-    stdin: false
   })
 
   const logger = getLogger(logLevel, worker)
@@ -47,7 +47,7 @@ module.exports = async function pry({ logLevel=null }={}) {
     })
     worker.on('exit', (code) => {
       logger.log('info', { type: 'parent-exit', code })
-      resolve()
+      resolve(code)
     })
   })
 }
