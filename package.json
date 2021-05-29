@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "stack-trace": "0.0.10",
-    "ws": "^7.0.0"
+    "ws": "^7.4.6"
   },
   "devDependencies": {}
 }
